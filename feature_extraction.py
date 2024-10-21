@@ -1,34 +1,31 @@
+# feature_extraction.py
 import numpy as np
 import pennylane as qml
 
-def split_and_scale_features(features, test_size=0.1, random_state=42):
-    from sklearn.model_selection import train_test_split
-    from sklearn.preprocessing import StandardScaler
-    
-    X = features[:, -32:]  
-    X_train, X_test = train_test_split(X, test_size=test_size, random_state=random_state)
-
-    scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
-
-    return X_train_scaled, X_test_scaled
-
-
-def extract_fft_features(X_train):
-    fft_transformed = np.fft.fft(X_train, axis=1)
-    X_train_fft = np.abs(fft_transformed)
-    return X_train_fft
-
-
-def qft_feature_extraction(X_train, num_qubits=5):
+# Quantum Fourier Transform (QFT) circuit
+def create_qft_circuit(num_qubits):
     device = qml.device("default.qubit", wires=num_qubits)
-
+    
     @qml.qnode(device)
     def qft_circuit(features):
+        norm = np.linalg.norm(features)
+        if norm == 0:
+            features = np.ones_like(features) * 1e-10
         qml.AmplitudeEmbedding(features=features, wires=range(num_qubits), pad_with=0.0, normalize=True)
         qml.QFT(wires=range(num_qubits))
         return qml.probs(wires=range(num_qubits))
+    
+    return qft_circuit
 
-    transformed_features = [qft_circuit(sample[:num_qubits]) for sample in X_train]
+# Feature extraction using QFT
+def extract_features_with_qft(data, qft_circuit, num_qubits):
+    transformed_features = []
+    for sample in data:
+        transformed_sample = qft_circuit(sample[:num_qubits])
+        transformed_features.append(transformed_sample)
     return np.array(transformed_features)
+
+# FFT transformation
+def extract_fft_features(data):
+    fft_transformed = np.fft.fft(data, axis=1)
+    return np.abs(fft_transformed)

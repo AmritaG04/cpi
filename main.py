@@ -1,41 +1,25 @@
-from data_loader import load_and_extract_cnn_features
-from feature_extraction import split_and_scale_features, extract_fft_features, qft_feature_extraction
-from classifiers import kmeans_clustering, svm_classification, gaussian_mixture_model
-from utils import visualize_pca
+# main.py
+from data_loader import load_dataset, extract_vgg16_features, preprocess_data
+from feature_extraction import create_qft_circuit, extract_features_with_qft, extract_fft_features
+from classifiers import run_clustering
+from visualize import visualize_clustering_results
 
+def main(data_path):
+    # Load dataset
+    generator = load_dataset(data_path)
+    features = extract_vgg16_features(generator)
 
-def main():
-
-    data_path = "/content/gdrive/My Drive/DRIVE/test"
-    features = load_and_extract_cnn_features(data_path)
-
-
-    X_train, X_test = split_and_scale_features(features)
-
-
-    X_train_fft = extract_fft_features(X_train)
-    X_train_qft = qft_feature_extraction(X_train)
-
+    # Preprocess data
+    X_train, X_test = preprocess_data(features)
     
-    print("\n--- K-Means Clustering ---")
-    kmeans_cnn, _ = kmeans_clustering(X_train, X_test, "CNN")
-    kmeans_fft, _ = kmeans_clustering(X_train_fft, X_test, "FFT")
-    kmeans_qft, _ = kmeans_clustering(X_train_qft, X_test, "QFT")
+    # Extract QFT and FFT features
+    qft_circuit = create_qft_circuit(num_qubits=2) 
+    X_train_qft = extract_features_with_qft(X_train, qft_circuit, num_qubits=2)
+    X_train_fft = extract_fft_features(X_train)
 
-    print("\n--- SVM Classification ---")
-    svm_cnn = svm_classification(X_train, X_test, "CNN")
-    svm_fft = svm_classification(X_train_fft, X_test, "FFT")
-    svm_qft = svm_classification(X_train_qft, X_test, "QFT")
-
-    print("\n--- Gaussian Mixture Model ---")
-    gmm_cnn, _ = gaussian_mixture_model(X_train, X_test, "CNN")
-    gmm_fft, _ = gaussian_mixture_model(X_train_fft, X_test, "FFT")
-    gmm_qft, _ = gaussian_mixture_model(X_train_qft, X_test, "QFT")
-
-    visualize_pca(X_train, kmeans_cnn, "CNN (VGG16)")
-    visualize_pca(X_train_fft, kmeans_fft, "FFT")
-    visualize_pca(X_train_qft, kmeans_qft, "QFT")
-
+    clustering_results = run_clustering(X_train_fft, X_train_qft, X_train)
+    visualize_clustering_results(X_train_fft, X_train_qft, X_train, clustering_results)
 
 if __name__ == "__main__":
-    main()
+    data_path = "test"  
+    main(data_path)
