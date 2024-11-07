@@ -1,25 +1,38 @@
-# main.py
-from data_loader import load_dataset, extract_vgg16_features, preprocess_data
-from feature_extraction import create_qft_circuit, extract_features_with_qft, extract_fft_features
-from classifiers import run_clustering
-from visualize import visualize_clustering_results
 
-def main(data_path):
-    # Load dataset
-    generator = load_dataset(data_path)
-    features = extract_vgg16_features(generator)
+from data_loader import load_data, extract_vgg16_features
+from feature_extraction import extract_features_with_qft, extract_features_with_fft
+from classifiers import kmeans_clustering, evaluate_clustering
+from visualize import visualize_features, visualize_pca_clusters
+from sklearn.decomposition import PCA
 
-    # Preprocess data
-    X_train, X_test = preprocess_data(features)
-    
-    # Extract QFT and FFT features
-    qft_circuit = create_qft_circuit(num_qubits=5) 
-    X_train_qft = extract_features_with_qft(X_train, qft_circuit, num_qubits=5)
-    X_train_fft = extract_fft_features(X_train)
+data_path = "/content/gdrive/My Drive/DRIVE/test"
 
-    clustering_results = run_clustering(X_train_fft, X_train_qft, X_train)
-    visualize_clustering_results(X_train_fft, X_train_qft, X_train, clustering_results)
+# Load data
+generator = load_data(data_path)
+features_df, image_filenames = extract_vgg16_features(generator)
+X = features_df.values[:, -32:]
 
-if __name__ == "__main__":
-    data_path = "test"  
-    main(data_path)
+# QFT and FFT feature extraction
+X_qft = extract_features_with_qft(X)
+X_fft = extract_features_with_fft(X)
+
+# Visualization
+visualize_features(X_qft, X_fft)
+
+# Clustering
+pca = PCA(n_components=2)
+fft_pca = pca.fit_transform(X_fft)
+qft_pca = pca.fit_transform(X_qft)
+
+labels_fft, _ = kmeans_clustering(X_fft)
+labels_qft, _ = kmeans_clustering(X_qft)
+
+visualize_pca_clusters(fft_pca, labels_fft, "K-Means Clustering on FFT Features")
+visualize_pca_clusters(qft_pca, labels_qft, "K-Means Clustering on QFT Features")
+
+# Evaluation
+cb_fft, db_fft, silhouette_fft = evaluate_clustering(X_fft, labels_fft)
+cb_qft, db_qft, silhouette_qft = evaluate_clustering(X_qft, labels_qft)
+
+print(f"FFT - Calinski-Harabasz: {cb_fft}, Davies-Bouldin: {db_fft}, Silhouette: {silhouette_fft}")
+print(f"QFT - Calinski-Harabasz: {cb_qft}, Davies-Bouldin: {db_qft}, Silhouette: {silhouette_qft}")
