@@ -13,8 +13,8 @@ def main(data_path):
     X_train, X_test = preprocess_data(features)
     
     # Extract QFT and FFT features
-    qft_circuit = create_qft_circuit(num_qubits=2) 
-    X_train_qft = extract_features_with_qft(X_train, qft_circuit, num_qubits=2)
+    qft_circuit = create_qft_circuit(num_qubits=5) 
+    X_train_qft = extract_features_with_qft(X_train, qft_circuit, num_qubits=5)
     X_train_fft = extract_fft_features(X_train)
 
     clustering_results = run_clustering(X_train_fft, X_train_qft, X_train)
